@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Fields: uid, email, displayName, universityTemplate, createdAt
+    //
+    // Collection: theses
+    // Fields: id, userId, title, topic, field, level, content, structure, formatting, progress, qualityScore, createdAt, updatedAt
+    //
+    // Collection: versions (subcollection of theses)
+    // Fields: id, thesisId, content, author, createdAt
+    //
+    // Collection: comments (subcollection of theses)
+    // Fields: id, text, author, authorId, createdAt
+    //
+    // Collection: citations (subcollection of theses)
+    // Fields: id, title, author, year, publisher, type, url
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "ilungaelisee821@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isThesisOwner(thesisId) {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/theses/$(thesisId)).data.userId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string && data.email is string &&
+             data.uid.size() < 100 && data.email.size() < 200;
+    }
+
+    function isValidThesis(data) {
+      return data.keys().hasAll(['userId', 'title']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500;
+    }
+
+    function isValidCitation(data) {
+      return data.keys().hasAll(['title', 'author', 'year']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 1000 &&
+             data.author is string && data.author.size() < 500 &&
+             data.year is string && data.year.size() < 10;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['text', 'author', 'authorId', 'createdAt']) &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 5000 &&
+             data.authorId == request.auth.uid;
+    }
+
+    function isValidVersion(data) {
+      return data.keys().hasAll(['name', 'content', 'author', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.author is string;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Allow reading profiles for collaboration
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /theses/{thesisId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidThesis(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidThesis(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      match /versions/{versionId} {
+        allow read: if isThesisOwner(thesisId);
+        allow create: if isThesisOwner(thesisId) && isValidVersion(request.resource.data);
+      }
+
+      match /comments/{commentId} {
+        allow read: if isThesisOwner(thesisId);
+        allow create: if isAuthenticated() && isValidComment(request.resource.data);
+        allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+
+      match /citations/{citationId} {
+        allow read: if isThesisOwner(thesisId);
+        allow create: if isThesisOwner(thesisId) && isValidCitation(request.resource.data);
+        allow update: if isThesisOwner(thesisId) && isValidCitation(request.resource.data);
+        allow delete: if isThesisOwner(thesisId);
+      }
+    }
+  }
+}

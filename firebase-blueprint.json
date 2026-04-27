@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "universityTemplate": { "type": "string", "enum": ["African", "European", "International"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Thesis": {
+      "title": "Thesis",
+      "description": "Main thesis document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "topic": { "type": "string" },
+        "field": { "type": "string" },
+        "level": { "type": "string", "enum": ["Bachelor", "Master", "PhD"] },
+        "content": { "type": "string" },
+        "structure": { "type": "object" },
+        "formatting": { "type": "object" },
+        "progress": { "type": "number" },
+        "qualityScore": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title"]
+    },
+    "Version": {
+      "title": "Version",
+      "description": "Saved version of a thesis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "content"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Collaboration comment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "author": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "authorId"]
+    },
+    "Citation": {
+      "title": "Citation",
+      "description": "Bibliographic source",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "year": { "type": "string" },
+        "publisher": { "type": "string" },
+        "type": { "type": "string", "enum": ["APA", "MLA", "Chicago"] },
+        "url": { "type": "string" }
+      },
+      "required": ["title", "author", "year"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/theses/{thesisId}": {
+      "schema": "Thesis",
+      "description": "Thesis documents"
+    },
+    "/theses/{thesisId}/versions/{versionId}": {
+      "schema": "Version",
+      "description": "Thesis versions"
+    },
+    "/theses/{thesisId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Collaboration comments"
+    },
+    "/theses/{thesisId}/citations/{citationId}": {
+      "schema": "Citation",
+      "description": "Bibliographic sources"
+    }
+  }
+}
